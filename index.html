@@ -127,10 +127,46 @@ const roundTrips=[
 ];
 
 const accommodation=[
-{id:'apt1',name:'Garden Flat',priceTotal:1420,img:'jacuzzi1.avif'},
-{id:'apt2',name:'Castle View',priceTotal:1243,img:'castle1.avif'},
-{id:'apt3',name:'Modern House',priceTotal:822,img:'tranent1.avif'},
-{id:'apt4',name:'Spacious Apartment',priceTotal:1012,img:'spacious1.avif'}
+{
+ id:'apt1',
+ name:'3 Bed Jacuzzi Apartment',
+ priceTotal:1420,
+ img:'jacuzzi1.avif',
+ beds:'3 beds · Sleeps 7',
+ area:'Edinburgh',
+ features:'Hot tub · Garden · Central location',
+ link:'https://www.airbnb.co.uk/rooms/1573071585601841424'
+},
+{
+ id:'apt2',
+ name:'Castle View Apartment',
+ priceTotal:1243,
+ img:'castle1.avif',
+ beds:'4 beds · Sleeps 7',
+ area:'Central Edinburgh',
+ features:'Castle views · Large lounge · Walkable centre',
+ link:'https://www.airbnb.co.uk/rooms/904112976466764917'
+},
+{
+ id:'apt3',
+ name:'Modern 4 Bed Home (Tranent)',
+ priceTotal:822,
+ img:'tranent1.avif',
+ beds:'4 beds · Sleeps 7',
+ area:'Tranent (20–25 min to city)',
+ features:'Modern house · Parking · Spacious',
+ link:'https://www.airbnb.co.uk/rooms/1523279684303427924'
+},
+{
+ id:'apt4',
+ name:'Spacious Edinburgh Apartment',
+ priceTotal:1012,
+ img:'spacious1.avif',
+ beds:'Multiple beds · Sleeps 7',
+ area:'Edinburgh',
+ features:'Large rooms · Central location · Group friendly',
+ link:'https://www.airbnb.co.uk/rooms/53499305'
+}
 ];
 
 const activities=[
@@ -216,16 +252,22 @@ function renderFlights(){
 
 function renderCards(){
  const card=item=>`<div class='card'>
- <img src='${item.img}'>
- <div class='card-content'>
- <h3>${item.name}</h3>
- <div class='price'>£${item.priceTotal?Math.round(item.priceTotal/7):item.price}</div>
- <div class='vote'>
- <span>${getVotes(item.id)}</span>
- <button onclick="vote('${item.id}')">Vote</button>
- </div>
- </div>
- </div>`;
+<img src='${item.img}'>
+<div class='card-content'>
+<h3>${item.name}</h3>
+<div>${item.beds || ''}</div>
+<div>${item.area || ''}</div>
+<div style="margin:6px 0;color:#555">${item.features || ''}</div>
+<div style="margin-bottom:8px">
+<a href='${item.link}' target='_blank' style="color:#2563eb;font-weight:bold;text-decoration:none">View Airbnb →</a>
+</div>
+<div class='price'>£${item.priceTotal?Math.round(item.priceTotal/7):item.price} pp</div>
+<div class='vote'>
+<span>${getVotes(item.id)}</span>
+<button onclick="vote('${item.id}')">Vote</button>
+</div>
+</div>
+</div>`;
 
  document.getElementById('accommodationList').innerHTML=accommodation.map(card).join('');
  document.getElementById('activityList').innerHTML=activities.map(card).join('');
@@ -325,3 +367,4 @@ renderAll();
 
 </body>
 </html>
+
