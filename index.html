@@ -11,15 +11,25 @@ nav { display:flex; gap:12px; justify-content:center; background:#1f2937; paddin
 nav button { background:#374151; color:white; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; }
 nav button.active { background:#2563eb; }
 .container { padding:20px; max-width:1100px; margin:auto; }
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
-.card { background:white; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,0.08); overflow:hidden; }
-.card img { width:100%; height:170px; object-fit:cover; }
-.card-content { padding:14px; }
-.price { font-weight:bold; color:#047857; margin:6px 0; }
-.vote { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
-.vote button { background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+
+.list { display:flex; flex-direction:column; gap:14px; }
+.listItem { background:white; border-radius:12px; border:1px solid #e5e7eb; padding:14px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
+.listHeader { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+.listTitle { font-size:18px; font-weight:bold; }
+.meta { color:#555; margin:4px 0; }
+.features { margin:6px 0 10px 0; }
+.voteRow { display:flex; justify-content:space-between; margin-top:8px; }
+.price { font-weight:bold; color:#047857; }
+
+.badgeRow{ margin:6px 0 8px 0; display:flex; gap:6px; flex-wrap:wrap; }
+.badge{ background:#e5e7eb; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600; }
+.badge.time{ background:#dbeafe; color:#1e40af; }
+.badge.type{ background:#dcfce7; color:#166534; }
+.badge.location{ background:#fef3c7; color:#92400e; }
+
 .page { display:none; }
 .page.active { display:block; }
+
 .flightRow {
 background:white;
 padding:10px;
@@ -45,6 +55,7 @@ align-items:center;
 <button onclick="showPage('accommodation',this)">Accommodation</button>
 <button onclick="showPage('activities',this)">Activities</button>
 <button onclick="showPage('results',this)">Results</button>
+<button onclick="showPage('voters',this)">Voters</button>
 </nav>
 
 <div class="container">
@@ -53,70 +64,131 @@ align-items:center;
 <h2>Weekend Overview</h2>
 <p>Edinburgh · 15–17 May 2026</p>
 
-<p>Select flights, accommodation and activities, then check the Results tab to see <strong>Your Ideal Weekend</strong>.</p>
-
-</div>
+<h3>Enter Your Name Before Voting</h3>
+<input id="nameInput" placeholder="Your name" style="padding:8px;font-size:16px">
+<button onclick="setName()">Save Name</button>
+<p id="currentUser"></p>
 </div>
 
 <div id="flights" class="page">
 <h2>Flights</h2>
 <h3>Outbound</h3>
 <div id="outboundList"></div>
-
 <h3>Return</h3>
 <div id="returnList"></div>
-
-<h3>Round Trip Options (EasyJet)</h3>
+<h3>Round Trip</h3>
 <div id="roundTripList"></div>
 </div>
 
 <div id="accommodation" class="page">
 <h2>Accommodation</h2>
-<div class="grid" id="accommodationList"></div>
+<div class="list" id="accommodationList"></div>
 </div>
 
 <div id="activities" class="page">
 <h2>Activities</h2>
-<div class="grid" id="activityList"></div>
+<div id="activityList"></div>
 </div>
 
 <div id="results" class="page">
 <h2>Your Ideal Weekend</h2>
-
 <div id="resultsContent">No selections yet</div>
-
-<div style="background:white;padding:16px;border-radius:12px;border:1px solid #e5e7eb;margin-top:20px">
-<h3>Group Popular Choices</h3>
-<div id="popularResults">No votes yet</div>
-</div>
 
 <div style="background:white;padding:16px;border-radius:12px;border:1px solid #e5e7eb;margin-top:20px">
 <h3>Estimated Weekend Cost</h3>
 <p>Flights: <strong id="flightCost">£0 pp</strong></p>
 <p>Accommodation: <strong id="accCost">£0 pp</strong></p>
 <p>Activities: <strong id="actCost">£0 pp</strong></p>
-<p>Drinks: <strong id="drinkCost">£0 pp</strong></p>
+<p>Drinks: <strong id="drinkCost">£125 pp</strong></p>
+<p>Possible Uber Rides: <strong id="transportCost">£50 pp</strong></p>
 <hr>
 <p><strong>Total: <span id="totalCost">£0 pp</span></strong></p>
 </div>
+
+<div style="background:white;padding:16px;border-radius:12px;border:1px solid #e5e7eb;margin-top:20px">
+<h3>Group Popular Choices</h3>
+<div id="popularResults">No votes yet</div>
 </div>
+</div>
+
+<div id="voters" class="page">
+<h2>Voters</h2>
+<div id="voterList">No votes recorded</div>
 </div>
 
 </div>
 
 <script>
 
-const drinkEstimate = 125;
+const drinkEstimate=125;
+const transportEstimate=50;
+let currentUser="";
+let userVotes={};
+
+function setName(){
+ const name=document.getElementById('nameInput').value.trim();
+ if(!name){alert('Enter your name');return;}
+ currentUser=name;
+ document.getElementById('currentUser').textContent="Voting as: "+name;
+}
+
+function getVotes(id){
+ let count=0;
+ for(const u in userVotes){
+ const v=userVotes[u];
+ if(v.flight===id) count++;
+ if(v.acc===id) count++;
+ if(Array.isArray(v.act) && v.act.includes(id)) count++;
+ }
+ return count;
+}
+
+function vote(id){
+ if(!currentUser){alert('Enter name first');return;}
+
+ if(!userVotes[currentUser])
+ userVotes[currentUser]={flight:null,acc:null,act:[]};
+
+ let category=null;
+
+ if(id.startsWith('f')||id.startsWith('rt')) category='flight';
+ else if(id.startsWith('apt')) category='acc';
+ else if(id.startsWith('a')) category='act';
+
+ if(category==='act'){
+ const arr=userVotes[currentUser].act;
+ const i=arr.indexOf(id);
+ if(i>-1) arr.splice(i,1);
+ else arr.push(id);
+ }
+ else{
+ if(userVotes[currentUser][category]===id)
+ userVotes[currentUser][category]=null;
+ else
+ userVotes[currentUser][category]=id;
+ }
+
+ renderAll();
+}
+
+function showPage(id,btn){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+ if(btn) btn.classList.add('active');
+}
+
+/* DATA */
 
 const flights=[
-{id:'f1',type:'outbound',airline:'easyJet',time:'07:05 → 08:25',price:55},
-{id:'f2',type:'outbound',airline:'easyJet',time:'12:00 → 13:15',price:76},
-{id:'f3',type:'outbound',airline:'easyJet',time:'16:35 → 17:50',price:44},
-{id:'f4',type:'outbound',airline:'easyJet',time:'20:25 → 21:40',price:36},
-{id:'f5',type:'return',airline:'easyJet',time:'13:15 → 14:35',price:59},
-{id:'f6',type:'return',airline:'easyJet',time:'15:40 → 17:00',price:101},
-{id:'f7',type:'return',airline:'easyJet',time:'17:30 → 18:45',price:88},
-{id:'f8',type:'return',airline:'easyJet',time:'22:10 → 23:25',price:31}
+{id:'f1',type:'outbound',time:'07:05 → 08:25',price:55},
+{id:'f2',type:'outbound',time:'12:00 → 13:15',price:76},
+{id:'f3',type:'outbound',time:'16:35 → 17:50',price:44},
+{id:'f4',type:'outbound',time:'20:25 → 21:40',price:36},
+{id:'f5',type:'return',time:'13:15 → 14:35',price:59},
+{id:'f6',type:'return',time:'15:40 → 17:00',price:101},
+{id:'f7',type:'return',time:'17:30 → 18:45',price:88},
+{id:'f8',type:'return',time:'22:10 → 23:25',price:31}
 ];
 
 const roundTrips=[
@@ -131,234 +203,322 @@ const accommodation=[
  id:'apt1',
  name:'3 Bed Jacuzzi Apartment',
  priceTotal:1420,
- img:'jacuzzi1.avif',
- beds:'3 beds · Sleeps 7',
+ beds:'3 Bedrooms · Sleeps 7',
  area:'Edinburgh',
- features:'Hot tub · Garden · Central location',
+ features:'Private hot tub · Modern interior · Open-plan living',
+ description:'Modern 3-bedroom apartment designed for groups of up to 7 guests. Features a private outdoor hot tub, large open-plan lounge and dining area, and a fully equipped kitchen suitable for group meals and drinks. Includes multiple bathrooms and contemporary furnishings. Ideal stag accommodation with communal space and a hot tub for relaxing after activities.',
  link:'https://www.airbnb.co.uk/rooms/1573071585601841424'
 },
 {
  id:'apt2',
  name:'Castle View Apartment',
  priceTotal:1243,
- img:'castle1.avif',
- beds:'4 beds · Sleeps 7',
+ beds:'4 Bedrooms · Sleeps 7',
  area:'Central Edinburgh',
- features:'Castle views · Large lounge · Walkable centre',
+ features:'Castle views · Central location · Spacious living area',
+ description:'Spacious 4-bedroom apartment located in central Edinburgh within walking distance of major attractions, restaurants and nightlife. Includes a large communal living area and kitchen, making it ideal for group stays. A strong option for stag groups wanting to stay centrally without relying on transport.',
  link:'https://www.airbnb.co.uk/rooms/904112976466764917'
 },
 {
  id:'apt3',
- name:'Modern 4 Bed Home (Tranent)',
+ name:'Modern House Tranent',
  priceTotal:822,
- img:'tranent1.avif',
- beds:'4 beds · Sleeps 7',
- area:'Tranent (20–25 min to city)',
- features:'Modern house · Parking · Spacious',
+ beds:'4 Bedrooms · Sleeps 7',
+ area:'Tranent (20–25 mins from Edinburgh)',
+ features:'Best value option · Full house · Parking available',
+ description:'Modern 4-bedroom house approximately 20–25 minutes from Edinburgh city centre. Includes a full kitchen, living room and private house layout offering space and privacy for groups. Best budget option for a stag group willing to travel into the city.',
  link:'https://www.airbnb.co.uk/rooms/1523279684303427924'
 },
 {
  id:'apt4',
  name:'Spacious Edinburgh Apartment',
  priceTotal:1012,
- img:'spacious1.avif',
- beds:'Multiple beds · Sleeps 7',
+ beds:'Sleeps 7',
  area:'Edinburgh',
- features:'Large rooms · Central location · Group friendly',
+ features:'Large rooms · Group-friendly layout · Good location',
+ description:'Large apartment suitable for groups with a spacious communal lounge and kitchen area. Provides a comfortable base between activities with enough space for socialising and pre-drinks before heading out.',
  link:'https://www.airbnb.co.uk/rooms/53499305'
+},
+{
+ id:'apt5',
+ name:'Central Edinburgh Group Apartment',
+ priceTotal:2105,
+ beds:'Multiple Bedrooms · Sleeps 7',
+ area:'Central Edinburgh',
+ features:'Central location · Walking distance nightlife · Group friendly',
+ description:'Large group apartment located centrally within walking distance of pubs, restaurants and attractions. Includes communal living areas and kitchen making it ideal for group stays and pre-drinks before nights out.',
+ link:'https://www.airbnb.co.uk/rooms/1079861765383249420'
+},
+{
+ id:'apt6',
+ name:'Modern Central Edinburgh Whole House',
+ priceTotal:1500,
+ beds:'Entire House · Sleeps 7',
+ area:'Central Edinburgh',
+ features:'Entire home · Multiple bedrooms · Private living space · Fully equipped kitchen',
+ description:'Entire modern house in Edinburgh suitable for groups of up to 7 guests. Offers exclusive use of the whole property with multiple bedrooms, a private lounge and dining area, and a fully equipped kitchen for group meals and pre-drinks. Provides more privacy and space than a typical apartment, making it ideal for stag groups. Located with good access to central Edinburgh attractions, pubs and transport links while giving the group a full private base for the weekend.',
+ link:'https://www.airbnb.co.uk/rooms/1602063709118854385'
+}
+,
+{
+ id:'apt7',
+ name:'Stylish Edinburgh Group Apartment',
+ priceTotal:1053,
+ beds:'Entire Apartment · Sleeps 7',
+ area:'Edinburgh',
+ features:'Entire place · Modern interior · Group friendly · Kitchen included',
+ description:'Stylish entire apartment in Edinburgh suitable for groups of up to 7 guests. Includes multiple sleeping areas, a comfortable lounge space for relaxing or pre-drinks, and a fully equipped kitchen for group meals. Located within reach of central Edinburgh with convenient transport options into the Old Town and Princes Street. A strong mid-range option offering good space at a reasonable price for a stag weekend.',
+ link:'https://www.airbnb.co.uk/rooms/1571196777017011951'
+},
+{
+ id:'apt8',
+ name:'Luxury Edinburgh Townhouse (VRBO)',
+ priceTotal:2754,
+ beds:'Entire House · Sleeps 7',
+ area:'Central Edinburgh',
+ features:'Entire home · Premium interior · Large living areas · Central location',
+ description:'Luxury townhouse in central Edinburgh suitable for groups of up to 7 guests. Offers exclusive use of the entire property with multiple bedrooms, spacious lounge areas and a fully equipped kitchen. High-end finishes and generous communal space make it ideal for stag groups wanting comfort and style. Located in central Edinburgh within easy reach of nightlife, restaurants and major attractions.',
+ link:'https://www.vrbo.com/en-gb/p10975303?chkin=2026-05-15&chkout=2026-05-17&d1=2026-05-15&d2=2026-05-17&startDate=2026-05-15&endDate=2026-05-17&x_pwa=1&rfrr=HSR&pwa_ts=1771782665718&referrerUrl=aHR0cHM6Ly93d3cudnJiby5jb20vSG90ZWwtU2VhcmNo&useRewards=false&adults=7&regionId=1100&destination=Edinburgh%2C+Scotland%2C+United+Kingdom&destType=MARKET&neighborhoodId=179569&latLong=55.953259%2C-3.188276&searchId=afade695-2b00-44ae-8ec1-c9e085149ef9&sort=RECOMMENDED&top_dp=2754&top_cur=GBP&userIntent=&selectedRoomType=74063721&selectedRatePlan=0001875d0bdcc3b24517bc6479dd28a8bde7&expediaPropertyId=74063721'
+},
+{
+ id:'apt9',
+ name:'4 Bedroom Edinburgh House (VRBO)',
+ priceTotal:1387,
+ beds:'4 Bedrooms · 2 Bathrooms · Sleeps 7+',
+ area:'Edinburgh (15–20 mins from Centre)',
+ features:'Entire home · 4 bedrooms · 2 bathrooms · Kitchen · Garden · Parking',
+ description:'Spacious 4-bedroom entire house in Edinburgh with two bathrooms and multiple sleeping arrangements suitable for groups. Includes a full kitchen, dining area and open living space for relaxing and pre-drinks. Located in a residential area around 15–20 minutes from Edinburgh city centre with regular bus routes nearby. The property includes parking, outdoor space and modern amenities such as WiFi, washer and dryer. A good mid-range house option offering more space and privacy than apartments while still being within easy reach of the city.',
+ link:'https://www.vrbo.com/en-gb/p11510895'
+}
+,
+{
+ id:'apt10',
+ name:'2 Chester Street Group House',
+ priceTotal:1050,
+ beds:'Entire Property · Sleeps 7+',
+ area:'Central Edinburgh (West End)',
+ features:'Entire property · Central location · Large bedrooms · Kitchen facilities',
+ description:'Large group accommodation at 2 Chester Street located in Edinburgh’s West End within walking distance of Princes Street and Haymarket. The property is designed for group stays and provides multiple large bedrooms and shared living areas suitable for stag groups. Includes kitchen facilities and communal space for relaxing or pre-drinks before heading out. Excellent central location with easy access to pubs, restaurants and transport links.',
+ link:'https://www.groupaccommodation.com/properties/2-chester-street-edinburgh-scotland'
+}
+,
+{
+ id:'apt11',
+ name:'Stag Boat House Accommodation',
+ priceTotal:1400,
+ beds:'Boat Cabins · Sleeps ~6–8',
+ area:'Edinburgh Marina Area',
+ features:'Unique stay · Private cabins · Lounge area · Kitchen · Deck space',
+ description:'Unique stag-friendly houseboat accommodation located in Edinburgh offering a memorable alternative to traditional apartments or houses. Boats typically include private cabin bedrooms, a lounge area with seating, kitchen facilities and a private deck area for relaxing with drinks. Facilities usually include heating, WiFi and cooking equipment with access to additional shore-based facilities such as showers and laundry. Individual boats typically sleep around 6 guests with multiple boats available for larger groups. A very different stag experience and ideal for groups wanting something memorable and social.',
+ link:'https://www.stagweb.co.uk/self-catering/property?propertyref=1197'
 }
 ];
 
 const activities=[
-{id:'a1',name:'Whisky Tasting',price:35,img:'https://images.unsplash.com/photo-1514361892635-e9550b6c1b6a'},
-{id:'a2',name:'Karting',price:45,img:'https://images.unsplash.com/photo-1517649763962-0c623066013b'},
-{id:'a3',name:'Bar Crawl',price:25,img:'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff'}
+
+{
+ id:'a1',
+ name:'Johnnie Walker Princes Street Whisky Experience',
+ price:30,
+ time:'1–1.5 hrs',
+ type:'Drinking',
+ location:'Central',
+ description:'Premium interactive whisky tasting experience located on Princes Street in the centre of Edinburgh. The experience normally lasts around 60–90 minutes and begins with a personalised flavour quiz which matches you with Scotch whiskies suited to your taste preferences. A guided host then leads you through immersive storytelling rooms explaining the origins of Johnnie Walker and the Scotch whisky making process. Multiple tastings are included and groups finish with access to the rooftop 1820 Bar offering panoramic views of Edinburgh Castle and the skyline. Ideal relaxed stag activity or pre-drinks experience before heading into the city nightlife.',
+ link:'https://www.johnniewalker.com/en-gb/visit-us-princes-street'
+},
+
+{
+ id:'a2',
+ name:'Xtreme Karting Edinburgh',
+ price:45,
+ time:'1–2 hrs',
+ type:'Competitive',
+ location:'Near City',
+ description:'High-performance indoor electric go-karting venue located roughly 15–20 minutes from Edinburgh city centre. Group race events typically include a full safety briefing, practice laps, timed qualifying sessions and a competitive final race with lap times recorded electronically. Modern electric karts provide fast acceleration and close racing. Private stag packages can include exclusive track sessions and access to a private event room for food and drinks afterwards. Sessions normally last between one and two hours making it one of the best competitive stag activities available locally.',
+ link:'https://xtremekarting.co.uk'
+},
+
+{
+ id:'a3',
+ name:'FUCK IT LETS GET DRUNK',
+ price:125,
+ time:'Whole Weekend',
+ type:'Drinking',
+ location:'Central',
+ description:'The simple option — fly into Edinburgh on Friday afternoon and head straight into the pubs and bars. Friday night drinking followed by a full Saturday bar crawl across the Old Town and New Town areas visiting pubs, bars and clubs. Sunday is a relaxed recovery before flying home. No structured activities, just a full stag weekend focused on drinking, nightlife and exploring Edinburghs pubs.',
+ link:''
+},
+
+{
+ id:'a4',
+ name:'Friday Comedy Show',
+ price:18,
+ time:'2 hrs',
+ type:'Show',
+ location:'Central',
+ description:'Friday night stand-up comedy show at The Stand Comedy Club in central Edinburgh. The show normally features a mixed line-up of around four to five professional comedians performing different styles of stand-up comedy. Doors usually open around 7pm with the show lasting approximately two hours including short intervals. Drinks are available from the bar throughout the evening. A relaxed and inexpensive way to start the stag weekend before heading out drinking afterwards.',
+ link:'https://www.whatsoninedinburgh.co.uk/event/016741-the-friday-show/'
+},
+
+{
+ id:'a5',
+ name:'Almost Impossible 2.0 – Magic Show',
+ price:16,
+ time:'1 hr',
+ type:'Show',
+ location:'Central',
+ description:'Live magic and comedy performance by illusionist Martin Brock combining stage illusions, mind-reading tricks and audience interaction. The show normally lasts around one hour and takes place at the Gilded Balloon venue in central Edinburgh. The performance mixes comedy with impressive visual tricks making it an entertaining and easy activity to fit into the day before an evening out.',
+ link:'https://www.whatsoninedinburgh.co.uk/event/157856-almost-impossible-2.0:-martin-brock/'
+},
+
+{
+ id:'a6',
+ name:'Escape Reality Escape Rooms',
+ price:20,
+ time:'1 hr',
+ type:'Competitive',
+ location:'Central',
+ description:'Team-based escape room experience located at Edinburgh Quay in Fountainbridge. Groups work together solving puzzles, clues and logic challenges in themed rooms in order to escape within 60 minutes. Multiple room themes are available including prison escapes, horror scenarios and adventure themes. Sessions include a short briefing and normally last around 60–90 minutes total. Ideal indoor group activity and good backup if the weather is poor.',
+ link:'https://www.escapereality.com/escape-rooms-uk/edinburgh/'
+},
+
+{
+ id:'a7',
+ name:'Battlezone Paintball',
+ price:40,
+ time:'Half Day',
+ type:'Adventure',
+ location:'Outside City',
+ description:'Outdoor paintball and activity centre located near South Queensferry approximately 20 minutes from Edinburgh. Stag packages include safety briefing, protective overalls, face masks and paintball equipment. The site features multiple woodland battle zones with structured missions run by marshals. Sessions normally last several hours making this a half-day activity. Additional activities such as quad biking, axe throwing and archery may also be available depending on package selected.',
+ link:'https://www.battlezonepaintball.co.uk/edinburgh-stag-hen-party-activities/'
+},
+
+{
+ id:'a8',
+ name:'Electric Shock Football',
+ price:35,
+ time:'1–1.5 hrs',
+ type:'Competitive',
+ location:'Near City',
+ description:'Unique stag activity where players compete in football matches while wearing remote-controlled electric shock devices. Teammates can trigger harmless shocks during matches creating chaos and lots of laughs. Sessions normally last around 60–90 minutes and include a host, referee and all equipment. Games usually include 5-a-side matches, penalty shootouts and skill challenges on outdoor 3G pitches.',
+ link:'https://www.electric-shock-football.co.uk/locations/edinburgh/'
+},
+
+{
+ id:'a9',
+ name:'Edinburgh Boat Party',
+ price:75,
+ time:'2–3 hrs',
+ type:'Drinking',
+ location:'Near City',
+ description:'Party boat cruise located around 15 minutes from Edinburgh city centre. Typical stag packages include a BBQ meal and approximately three drinks per person with additional drinks available from the onboard bar. Music is played throughout creating a lively party atmosphere while cruising along the coastline. Cruises normally last around two hours and often include multiple stag and hen groups making it a social daytime or early evening activity.',
+ link:'https://stagandhenworld.com/activity/boat-party-in-edinburgh/'
+},
+
+{
+ id:'a10',
+ name:'Clay Pigeon Shooting',
+ price:65,
+ time:'1–1.5 hrs',
+ type:'Adventure',
+ location:'Outside City',
+ description:'Outdoor clay pigeon shooting experience at MadMax Adventures approximately 25–30 minutes from Edinburgh. Sessions include a full safety briefing followed by instruction from experienced shooting coaches. Typically includes around 25 cartridges per person with multiple shooting positions and clay target styles. Suitable for beginners and experienced shooters and allows for competitive scoring between the group.',
+ link:'https://www.madmaxadventures.com/activities/clay-pigeon-shooting/'
+}
+
 ];
 
-let votes={};
-
-// Track user's current selections (one per category)
-let userVotes={
- outbound:null,
- return:null,
- roundtrip:null,
- accommodation:null,
- activity:null
-};
-
-function getVotes(id){ return votes[id]||0; }
-
-function vote(id){
-
-// Determine category
-let category=null;
-
-if(flights.find(f=>f.id===id && f.type==='outbound')) category='outbound';
-else if(flights.find(f=>f.id===id && f.type==='return')) category='return';
-else if(roundTrips.find(r=>r.id===id)) category='roundtrip';
-else if(accommodation.find(a=>a.id===id)) category='accommodation';
-else if(activities.find(a=>a.id===id)) category='activity';
-
-if(!category) return;
-
-// Remove existing vote in category
-const previous=userVotes[category];
-
-if(previous===id){
- // Toggle off
- votes[id]=Math.max((votes[id]||1)-1,0);
- userVotes[category]=null;
-}
-else{
- // Remove previous vote
- if(previous){
- votes[previous]=Math.max((votes[previous]||1)-1,0);
- }
-
-// Add new vote
-votes[id]=(votes[id]||0)+1;
-userVotes[category]=id;
-}
-
-renderAll();
-}
-
-function showPage(id,btn){
- document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
- document.getElementById(id).classList.add('active');
- document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
- btn.classList.add('active');
-}
+/* RENDER */
 
 function renderFlights(){
- const out=flights.filter(f=>f.type==='outbound');
- const ret=flights.filter(f=>f.type==='return');
+ document.getElementById('outboundList').innerHTML=
+ flights.filter(f=>f.type==='outbound').map(f=>
+ `<div class='flightRow'>${f.time} £${f.price} <button onclick="vote('${f.id}')">Vote</button> ${getVotes(f.id)}</div>`).join('');
 
- const row=f=>`<div class='flightRow'>
- <div>${f.airline}<br>${f.time} £${f.price}</div>
- <div><button onclick="vote('${f.id}')">Vote</button> ${getVotes(f.id)}</div>
- </div>`;
+ document.getElementById('returnList').innerHTML=
+ flights.filter(f=>f.type==='return').map(f=>
+ `<div class='flightRow'>${f.time} £${f.price} <button onclick="vote('${f.id}')">Vote</button> ${getVotes(f.id)}</div>`).join('');
 
- document.getElementById('outboundList').innerHTML=out.map(row).join('');
- document.getElementById('returnList').innerHTML=ret.map(row).join('');
-
- const roundRow=r=>`<div class='flightRow'>
- <div>easyJet Round Trip<br>${r.label} £${r.price}</div>
- <div><button onclick="vote('${r.id}')">Vote</button> ${getVotes(r.id)}</div>
- </div>`;
-
- document.getElementById('roundTripList').innerHTML=roundTrips.map(roundRow).join('');
+ document.getElementById('roundTripList').innerHTML=
+ roundTrips.map(r=>
+ `<div class='flightRow'>${r.label} £${r.price} <button onclick="vote('${r.id}')">Vote</button> ${getVotes(r.id)}</div>`).join('');
 }
 
-function renderCards(){
- const card=item=>`<div class='card'>
-<img src='${item.img}'>
-<div class='card-content'>
-<h3>${item.name}</h3>
-<div>${item.beds || ''}</div>
-<div>${item.area || ''}</div>
-<div style="margin:6px 0;color:#555">${item.features || ''}</div>
-<div style="margin-bottom:8px">
-<a href='${item.link}' target='_blank' style="color:#2563eb;font-weight:bold;text-decoration:none">View Airbnb →</a>
-</div>
-<div class='price'>£${item.priceTotal?Math.round(item.priceTotal/7):item.price} pp</div>
-<div class='vote'>
-<span>${getVotes(item.id)}</span>
-<button onclick="vote('${item.id}')">Vote</button>
-</div>
-</div>
-</div>`;
-
- document.getElementById('accommodationList').innerHTML=accommodation.map(card).join('');
- document.getElementById('activityList').innerHTML=activities.map(card).join('');
+function renderAccommodation(){
+ document.getElementById('accommodationList').innerHTML=
+ accommodation.map(a=>
+ `<div class='listItem'>
+ <div class='listTitle'>${a.name}</div>
+ <div class='price'>£${Math.round(a.priceTotal/7)} pp</div>
+ <div>${a.description}</div>
+ <a href='${a.link}' target='_blank'>View Airbnb</a>
+ <div class='voteRow'>Votes ${getVotes(a.id)} <button onclick="vote('${a.id}')">Vote</button></div>
+ </div>`).join('');
 }
 
-function renderCosts(){
- const bestOut=[...flights].filter(f=>f.type==='outbound').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
- const bestRet=[...flights].filter(f=>f.type==='return').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
- const bestAcc=[...accommodation].sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
- const acts=[...activities].sort((a,b)=>getVotes(b.id)-getVotes(a.id));
+function renderActivities(){
+ document.getElementById('activityList').innerHTML=
+ activities.map(a=>
+ `<div class='listItem'>
+ <div class='listTitle'>${a.name}</div>
+ <div class='badgeRow'>
+ <span class='badge time'>${a.time}</span>
+ <span class='badge type'>${a.type}</span>
+ <span class='badge location'>${a.location}</span>
+ </div>
+ <div class='price'>£${a.price} pp</div>
+ <div>${a.description}</div>
+ <div class='voteRow'>Votes ${getVotes(a.id)} <button onclick="vote('${a.id}')">Vote</button></div>
+ </div>`).join('');
+}
 
- const flightCost=(bestOut&&bestRet&&getVotes(bestOut.id)&&getVotes(bestRet.id))?
- bestOut.price+bestRet.price:0;
+function renderResults(){
 
- const accCost=(bestAcc&&getVotes(bestAcc.id))?
- Math.round(bestAcc.priceTotal/7):0;
+ let flightCost=0,accCost=0,actCost=0;
 
- const actCost=acts.some(a=>getVotes(a.id))?
- Math.round(acts.reduce((s,a)=>s+a.price,0)/acts.length):0;
+ for(const u in userVotes){
+ const v=userVotes[u];
 
- const drinks=Object.values(votes).some(v=>v>0)?drinkEstimate:0;
- const total=flightCost+accCost+actCost+drinks;
+ if(v.flight){
+ const f=[...flights,...roundTrips].find(x=>x.id===v.flight);
+ if(f) flightCost=f.price;
+ }
+
+ if(v.acc){
+ const a=accommodation.find(x=>x.id===v.acc);
+ if(a) accCost=Math.round(a.priceTotal/7);
+ }
+
+ if(Array.isArray(v.act)){
+ v.act.forEach(id=>{
+ const a=activities.find(x=>x.id===id);
+ if(a) actCost+=a.price;
+ });
+ }
+ }
+
+ const total=flightCost+accCost+actCost+drinkEstimate+transportEstimate;
 
  document.getElementById('flightCost').textContent=`£${flightCost} pp`;
  document.getElementById('accCost').textContent=`£${accCost} pp`;
  document.getElementById('actCost').textContent=`£${actCost} pp`;
- document.getElementById('drinkCost').textContent=`£${drinks} pp`;
- document.getElementById('totalCost').textContent=`£${total} pp`;
+ document.getElementById('transportCost').textContent=`£${transportEstimate} pp`;
+document.getElementById('totalCost').textContent=`£${total} pp`;
 }
 
-function renderResults(){
- const bestAcc=[...accommodation].sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
- const bestOut=[...flights].filter(f=>f.type==='outbound').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
- const bestRet=[...flights].filter(f=>f.type==='return').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
-
- let html="";
-
- if(bestAcc && getVotes(bestAcc.id)) html+=`<h3>Your Choices</h3>Accommodation: ${bestAcc.name}<br>`;
- if(bestOut && bestRet && getVotes(bestOut.id)&&getVotes(bestRet.id)) html+=`Flights:<br>${bestOut.time}<br>${bestRet.time}<br>`;
-
- document.getElementById('resultsContent').innerHTML=html||"No selections yet";
-
- // Popular group results
- const topAcc=[...accommodation]
- .sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
-
- const topOut=[...flights]
- .filter(f=>f.type==='outbound')
- .sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
-
- const topRet=[...flights]
- .filter(f=>f.type==='return')
- .sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
-
- const topActs=[...activities]
- .sort((a,b)=>getVotes(b.id)-getVotes(a.id))
- .slice(0,3);
-
- let popularHTML="";
-
- if(Object.values(votes).some(v=>v>0)){
-
- if(topAcc && getVotes(topAcc.id))
- popularHTML+=`Accommodation: ${topAcc.name} (${getVotes(topAcc.id)} votes)<br>`;
-
- if(topOut && getVotes(topOut.id))
- popularHTML+=`Outbound Flight: ${topOut.time} (${getVotes(topOut.id)} votes)<br>`;
-
- if(topRet && getVotes(topRet.id))
- popularHTML+=`Return Flight: ${topRet.time} (${getVotes(topRet.id)} votes)<br>`;
-
- if(topActs.some(a=>getVotes(a.id))){
- popularHTML+="Activities:<br>";
- topActs.forEach(a=>{
- if(getVotes(a.id))
- popularHTML+=`${a.name} (${getVotes(a.id)} votes)<br>`;
- });
- }
-
- }else{
- popularHTML="No votes yet";
- }
-
- document.getElementById('popularResults').innerHTML=popularHTML;
+function renderVoters(){
+ const names=Object.keys(userVotes);
+ document.getElementById('voterList').innerHTML=
+ names.length?names.map(n=>`<div>${n}</div>`).join(''):
+ 'No votes recorded';
 }
 
 function renderAll(){
  renderFlights();
- renderCards();
- renderCosts();
+ renderAccommodation();
+ renderActivities();
  renderResults();
+ renderVoters();
 }
 
 renderAll();
@@ -367,4 +527,5 @@ renderAll();
 
 </body>
 </html>
+
 
