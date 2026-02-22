@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Edinburgh Stag Planner</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; background:#f5f7fb; }
+header { background:#111827; color:white; padding:16px; text-align:center; }
+nav { display:flex; gap:12px; justify-content:center; background:#1f2937; padding:10px; flex-wrap:wrap; }
+nav button { background:#374151; color:white; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; }
+nav button.active { background:#2563eb; }
+.container { padding:20px; max-width:1100px; margin:auto; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
+.card { background:white; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,0.08); overflow:hidden; }
+.card img { width:100%; height:170px; object-fit:cover; }
+.card-content { padding:14px; }
+.price { font-weight:bold; color:#047857; margin:6px 0; }
+.vote { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+.vote button { background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+.page { display:none; }
+.page.active { display:block; }
+.flightRow {
+background:white;
+padding:10px;
+border-radius:8px;
+margin-bottom:8px;
+border:1px solid #e5e7eb;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>🍻 Edinburgh Stag Do Planner</h1>
+<p>Vote for where we stay and what we do</p>
+</header>
+
+<nav>
+<button onclick="showPage('home',this)" class="active">Home</button>
+<button onclick="showPage('flights',this)">Flights</button>
+<button onclick="showPage('accommodation',this)">Accommodation</button>
+<button onclick="showPage('activities',this)">Activities</button>
+<button onclick="showPage('results',this)">Results</button>
+</nav>
+
+<div class="container">
+
+<div id="home" class="page active">
+<h2>Weekend Overview</h2>
+<p>Edinburgh · 15–17 May 2026</p>
+
+<p>Select flights, accommodation and activities, then check the Results tab to see <strong>Your Ideal Weekend</strong>.</p>
+
+</div>
+</div>
+
+<div id="flights" class="page">
+<h2>Flights</h2>
+<h3>Outbound</h3>
+<div id="outboundList"></div>
+
+<h3>Return</h3>
+<div id="returnList"></div>
+
+<h3>Round Trip Options (EasyJet)</h3>
+<div id="roundTripList"></div>
+</div>
+
+<div id="accommodation" class="page">
+<h2>Accommodation</h2>
+<div class="grid" id="accommodationList"></div>
+</div>
+
+<div id="activities" class="page">
+<h2>Activities</h2>
+<div class="grid" id="activityList"></div>
+</div>
+
+<div id="results" class="page">
+<h2>Your Ideal Weekend</h2>
+
+<div id="resultsContent">No selections yet</div>
+
+<div style="background:white;padding:16px;border-radius:12px;border:1px solid #e5e7eb;margin-top:20px">
+<h3>Group Popular Choices</h3>
+<div id="popularResults">No votes yet</div>
+</div>
+
+<div style="background:white;padding:16px;border-radius:12px;border:1px solid #e5e7eb;margin-top:20px">
+<h3>Estimated Weekend Cost</h3>
+<p>Flights: <strong id="flightCost">£0 pp</strong></p>
+<p>Accommodation: <strong id="accCost">£0 pp</strong></p>
+<p>Activities: <strong id="actCost">£0 pp</strong></p>
+<p>Drinks: <strong id="drinkCost">£0 pp</strong></p>
+<hr>
+<p><strong>Total: <span id="totalCost">£0 pp</span></strong></p>
+</div>
+</div>
+</div>
+
+</div>
+
+<script>
+
+const drinkEstimate = 125;
+
+const flights=[
+{id:'f1',type:'outbound',airline:'easyJet',time:'07:05 → 08:25',price:55},
+{id:'f2',type:'outbound',airline:'easyJet',time:'12:00 → 13:15',price:76},
+{id:'f3',type:'outbound',airline:'easyJet',time:'16:35 → 17:50',price:44},
+{id:'f4',type:'outbound',airline:'easyJet',time:'20:25 → 21:40',price:36},
+{id:'f5',type:'return',airline:'easyJet',time:'13:15 → 14:35',price:59},
+{id:'f6',type:'return',airline:'easyJet',time:'15:40 → 17:00',price:101},
+{id:'f7',type:'return',airline:'easyJet',time:'17:30 → 18:45',price:88},
+{id:'f8',type:'return',airline:'easyJet',time:'22:10 → 23:25',price:31}
+];
+
+const roundTrips=[
+{id:'rt1',label:'20:25 → 21:40 + 22:10 → 23:25',price:67},
+{id:'rt2',label:'16:35 → 17:50 + 17:30 → 18:45',price:75},
+{id:'rt3',label:'07:05 → 08:25 + 13:15 → 14:35',price:86},
+{id:'rt4',label:'12:00 → 13:15 + 15:40 → 17:00',price:107}
+];
+
+const accommodation=[
+{id:'apt1',name:'Garden Flat',priceTotal:1420,img:'jacuzzi1.avif'},
+{id:'apt2',name:'Castle View',priceTotal:1243,img:'castle1.avif'},
+{id:'apt3',name:'Modern House',priceTotal:822,img:'tranent1.avif'},
+{id:'apt4',name:'Spacious Apartment',priceTotal:1012,img:'spacious1.avif'}
+];
+
+const activities=[
+{id:'a1',name:'Whisky Tasting',price:35,img:'https://images.unsplash.com/photo-1514361892635-e9550b6c1b6a'},
+{id:'a2',name:'Karting',price:45,img:'https://images.unsplash.com/photo-1517649763962-0c623066013b'},
+{id:'a3',name:'Bar Crawl',price:25,img:'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff'}
+];
+
+let votes={};
+
+// Track user's current selections (one per category)
+let userVotes={
+ outbound:null,
+ return:null,
+ roundtrip:null,
+ accommodation:null,
+ activity:null
+};
+
+function getVotes(id){ return votes[id]||0; }
+
+function vote(id){
+
+// Determine category
+let category=null;
+
+if(flights.find(f=>f.id===id && f.type==='outbound')) category='outbound';
+else if(flights.find(f=>f.id===id && f.type==='return')) category='return';
+else if(roundTrips.find(r=>r.id===id)) category='roundtrip';
+else if(accommodation.find(a=>a.id===id)) category='accommodation';
+else if(activities.find(a=>a.id===id)) category='activity';
+
+if(!category) return;
+
+// Remove existing vote in category
+const previous=userVotes[category];
+
+if(previous===id){
+ // Toggle off
+ votes[id]=Math.max((votes[id]||1)-1,0);
+ userVotes[category]=null;
+}
+else{
+ // Remove previous vote
+ if(previous){
+ votes[previous]=Math.max((votes[previous]||1)-1,0);
+ }
+
+// Add new vote
+votes[id]=(votes[id]||0)+1;
+userVotes[category]=id;
+}
+
+renderAll();
+}
+
+function showPage(id,btn){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+ btn.classList.add('active');
+}
+
+function renderFlights(){
+ const out=flights.filter(f=>f.type==='outbound');
+ const ret=flights.filter(f=>f.type==='return');
+
+ const row=f=>`<div class='flightRow'>
+ <div>${f.airline}<br>${f.time} £${f.price}</div>
+ <div><button onclick="vote('${f.id}')">Vote</button> ${getVotes(f.id)}</div>
+ </div>`;
+
+ document.getElementById('outboundList').innerHTML=out.map(row).join('');
+ document.getElementById('returnList').innerHTML=ret.map(row).join('');
+
+ const roundRow=r=>`<div class='flightRow'>
+ <div>easyJet Round Trip<br>${r.label} £${r.price}</div>
+ <div><button onclick="vote('${r.id}')">Vote</button> ${getVotes(r.id)}</div>
+ </div>`;
+
+ document.getElementById('roundTripList').innerHTML=roundTrips.map(roundRow).join('');
+}
+
+function renderCards(){
+ const card=item=>`<div class='card'>
+ <img src='${item.img}'>
+ <div class='card-content'>
+ <h3>${item.name}</h3>
+ <div class='price'>£${item.priceTotal?Math.round(item.priceTotal/7):item.price}</div>
+ <div class='vote'>
+ <span>${getVotes(item.id)}</span>
+ <button onclick="vote('${item.id}')">Vote</button>
+ </div>
+ </div>
+ </div>`;
+
+ document.getElementById('accommodationList').innerHTML=accommodation.map(card).join('');
+ document.getElementById('activityList').innerHTML=activities.map(card).join('');
+}
+
+function renderCosts(){
+ const bestOut=[...flights].filter(f=>f.type==='outbound').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+ const bestRet=[...flights].filter(f=>f.type==='return').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+ const bestAcc=[...accommodation].sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+ const acts=[...activities].sort((a,b)=>getVotes(b.id)-getVotes(a.id));
+
+ const flightCost=(bestOut&&bestRet&&getVotes(bestOut.id)&&getVotes(bestRet.id))?
+ bestOut.price+bestRet.price:0;
+
+ const accCost=(bestAcc&&getVotes(bestAcc.id))?
+ Math.round(bestAcc.priceTotal/7):0;
+
+ const actCost=acts.some(a=>getVotes(a.id))?
+ Math.round(acts.reduce((s,a)=>s+a.price,0)/acts.length):0;
+
+ const drinks=Object.values(votes).some(v=>v>0)?drinkEstimate:0;
+ const total=flightCost+accCost+actCost+drinks;
+
+ document.getElementById('flightCost').textContent=`£${flightCost} pp`;
+ document.getElementById('accCost').textContent=`£${accCost} pp`;
+ document.getElementById('actCost').textContent=`£${actCost} pp`;
+ document.getElementById('drinkCost').textContent=`£${drinks} pp`;
+ document.getElementById('totalCost').textContent=`£${total} pp`;
+}
+
+function renderResults(){
+ const bestAcc=[...accommodation].sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+ const bestOut=[...flights].filter(f=>f.type==='outbound').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+ const bestRet=[...flights].filter(f=>f.type==='return').sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+
+ let html="";
+
+ if(bestAcc && getVotes(bestAcc.id)) html+=`<h3>Your Choices</h3>Accommodation: ${bestAcc.name}<br>`;
+ if(bestOut && bestRet && getVotes(bestOut.id)&&getVotes(bestRet.id)) html+=`Flights:<br>${bestOut.time}<br>${bestRet.time}<br>`;
+
+ document.getElementById('resultsContent').innerHTML=html||"No selections yet";
+
+ // Popular group results
+ const topAcc=[...accommodation]
+ .sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+
+ const topOut=[...flights]
+ .filter(f=>f.type==='outbound')
+ .sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+
+ const topRet=[...flights]
+ .filter(f=>f.type==='return')
+ .sort((a,b)=>getVotes(b.id)-getVotes(a.id))[0];
+
+ const topActs=[...activities]
+ .sort((a,b)=>getVotes(b.id)-getVotes(a.id))
+ .slice(0,3);
+
+ let popularHTML="";
+
+ if(Object.values(votes).some(v=>v>0)){
+
+ if(topAcc && getVotes(topAcc.id))
+ popularHTML+=`Accommodation: ${topAcc.name} (${getVotes(topAcc.id)} votes)<br>`;
+
+ if(topOut && getVotes(topOut.id))
+ popularHTML+=`Outbound Flight: ${topOut.time} (${getVotes(topOut.id)} votes)<br>`;
+
+ if(topRet && getVotes(topRet.id))
+ popularHTML+=`Return Flight: ${topRet.time} (${getVotes(topRet.id)} votes)<br>`;
+
+ if(topActs.some(a=>getVotes(a.id))){
+ popularHTML+="Activities:<br>";
+ topActs.forEach(a=>{
+ if(getVotes(a.id))
+ popularHTML+=`${a.name} (${getVotes(a.id)} votes)<br>`;
+ });
+ }
+
+ }else{
+ popularHTML="No votes yet";
+ }
+
+ document.getElementById('popularResults').innerHTML=popularHTML;
+}
+
+function renderAll(){
+ renderFlights();
+ renderCards();
+ renderCosts();
+ renderResults();
+}
+
+renderAll();
+
+</script>
+
+</body>
+</html>
